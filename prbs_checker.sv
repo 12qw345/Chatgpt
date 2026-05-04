@@ -1,86 +1,89 @@
 module prbs_checker #(
-    parameter int WIDTH     = 32,
+    parameter int WIDTH = 32,
     parameter int OUT_WIDTH = 16
-)(
-    input   logic                   clk_32,
-    input   logic                   clk_16,
-    
-    input   logic                   rst_n,
-    input   logic                   enable,
-    
-    input   logic                   loadseed,
-    input   logic [OUT_WIDTH-1:0]   prbs_in,
-    
-    output  logic [OUT_WIDTH-1:0]   error_cnt,
-    output  logic                   error
+) (
+    input  logic                 clk_32_i,
+    input  logic                 clk_16_i,
+    input  logic                 rst_n_i,
+    input  logic                 enable_i,
+    input  logic                 loadseed_i,
+    input  logic [OUT_WIDTH-1:0] prbs_in_i,
+    output logic [OUT_WIDTH-1:0] error_cnt_o,
+    output logic                 error_o
 );
 
-    logic                 loadseed_d1,loadseed_d2;
+    logic                 loadseed_d1_q;
+    logic                 loadseed_d2_q;
     logic                 loadseed_pulse;
-    logic [OUT_WIDTH-1:0] prbs_in_prev;
-
-    logic [WIDTH-1:0] seed_comb;
-    logic [WIDTH-1:0] lfsr;
-    logic [WIDTH-1:0] temp;
-    logic [WIDTH-1:0] prbs_next_rx;
-    logic             aligned;
-    int               i;
+    logic [OUT_WIDTH-1:0] prbs_in_prev_q;
+    logic [WIDTH-1:0]     seed_comb_q;
+    logic [WIDTH-1:0]     lfsr_q;
+    logic [WIDTH-1:0]     temp;
+    logic [WIDTH-1:0]     prbs_next_rx;
+    logic                 aligned_q;
+    int                   i;
 
     always_comb begin
-        temp         = lfsr;
+        temp         = lfsr_q;
         prbs_next_rx = '0;
-        if (enable) begin
+        if (enable_i) begin
             for (i = 0; i < WIDTH; i++) begin
-                temp                   = {temp[30:0], temp[31] ^ temp[28]};
+                temp = {temp[30:0], temp[31] ^ temp[28]};
                 prbs_next_rx[WIDTH-1-i] = temp[0];
             end
         end
     end
 
-    always_ff @(posedge clk_16 or negedge rst_n) begin
-        if (!rst_n) begin
-            prbs_in_prev <= '0;
-        end else if (enable) begin
-            prbs_in_prev <= prbs_in;
-        end
-    end
-
-    always_ff @(posedge clk_32 or negedge rst_n) begin
-        if (!rst_n) begin
-            seed_comb     <= '0;
-            loadseed_d1   <= 1'b0;
-            loadseed_d2   <= 1'b0;
+    always_ff @(posedge clk_16_i or negedge rst_n_i) begin
+        if (!rst_n_i) begin
+            prbs_in_prev_q <= '0;
         end else begin
-            seed_comb     <= {prbs_in_prev, prbs_in};
-            loadseed_d1   <= loadseed;
-            loadseed_d2   <= loadseed_d1;
+            if (enable_i) begin
+                prbs_in_prev_q <= prbs_in_i;
+            end
         end
     end
 
-    assign loadseed_pulse = loadseed_d1 & ~loadseed_d2;
-
-    always_ff @(posedge clk_32 or negedge rst_n) begin
-        if (!rst_n) begin
-            lfsr    <= '0;
-            aligned <= 1'b0;
-        end else if (loadseed_pulse) begin
-            lfsr    <= seed_comb;
-            aligned <= 1'b1;
-        end else if (enable && aligned) begin
-            lfsr    <= temp;
+    always_ff @(posedge clk_32_i or negedge rst_n_i) begin
+        if (!rst_n_i) begin
+            seed_comb_q   <= '0;
+            loadseed_d1_q <= 1'b0;
+            loadseed_d2_q <= 1'b0;
+        end else begin
+            seed_comb_q   <= {prbs_in_prev_q, prbs_in_i};
+            loadseed_d1_q <= loadseed_i;
+            loadseed_d2_q <= loadseed_d1_q;
         end
     end
 
-    always_ff @(posedge clk_32 or negedge rst_n) begin
-        if (!rst_n) begin
-            error     <= 1'b0;
-            error_cnt <= '0;
-        end else if (enable && aligned) begin
-            if (seed_comb != prbs_next_rx) begin
-                error     <= 1'b1;
-                error_cnt <= error_cnt + 1'b1;
-            end else begin
-                error <= 1'b0;
+    assign loadseed_pulse = loadseed_d1_q & ~loadseed_d2_q;
+
+    always_ff @(posedge clk_32_i or negedge rst_n_i) begin
+        if (!rst_n_i) begin
+            lfsr_q    <= '0;
+            aligned_q <= 1'b0;
+        end else begin
+            if (loadseed_pulse) begin
+                lfsr_q    <= seed_comb_q;
+                aligned_q <= 1'b1;
+            end else if (enable_i && aligned_q) begin
+                lfsr_q <= temp;
+            end
+        end
+    end
+
+    always_ff @(posedge clk_32_i or negedge rst_n_i) begin
+        if (!rst_n_i) begin
+            error_o     <= 1'b0;
+            error_cnt_o <= '0;
+        end else begin
+            if (enable_i && aligned_q) begin
+                if (seed_comb_q != prbs_next_rx) begin
+                    error_o     <= 1'b1;
+                    error_cnt_o <= error_cnt_o + 1'b1;
+                end else begin
+                    error_o <= 1'b0;
+                end
             end
         end
     end

@@ -16,6 +16,9 @@ module prbs_tb;
     logic [OUT_WIDTH-1:0] prbs_in;
     logic [OUT_WIDTH-1:0] error_cnt;
     logic error;
+    logic serial_out;
+    logic s_serial_valid;
+    logic valid_in;
 
     // --- Internal ---
     logic [OUT_WIDTH-1:0] prbs_corrupted;
@@ -43,31 +46,31 @@ module prbs_tb;
         .WIDTH(WIDTH),
         .OUT_WIDTH(OUT_WIDTH)
     ) dut (
-        .clk_32(clk_32),
-        .clk_16(clk_16),
-        .clk_ser(clk_ser),
-        .rst_n(rst_n),
+        .clk_32_i(clk_32),
+        .clk_16_i(clk_16),
+        .clk_ser_i(clk_ser),
+        .rst_n_i(rst_n),
 
-        .gen_enable(gen_enable),
-        .chk_enable(chk_enable),
-        .serdes_enable(serdes_enable),
-        .loadseed(loadseed),
-        .seed(seed),
+        .gen_enable_i(gen_enable),
+        .chk_enable_i(chk_enable),
+        .serdes_enable_i(serdes_enable),
+        .loadseed_i(loadseed),
+        .seed_i(seed),
 
-        .prbs_corrupted(prbs_corrupted),
+        .prbs_corrupted_i(prbs_corrupted),
 
-        .s_serial_valid(s_serial_valid),
-        .serial_out(serial_out),
+        .s_serial_valid_o(s_serial_valid),
+        .serial_out_o(serial_out),
 
-        .d_serial_valid_out(d_serial_valid_out),
-        .prbs16_out(prbs16_out),
-        .prbs_in(prbs_in),
-        .prbs_data_out(prbs_data_out),
-        .prbs_data_in(prbs_data_in),
-        .valid_out(valid_out),
-        .valid_in(valid_in),
-        .error_cnt(error_cnt),
-        .error(error)
+        .d_serial_valid_out_o(d_serial_valid_out),
+        .prbs16_out_o(prbs16_out),
+        .prbs_in_i(prbs_in),
+        .prbs_data_out_o(prbs_data_out),
+        .prbs_data_in_i(prbs_data_in),
+        .valid_out_o(valid_out),
+        .valid_in_i(valid_in),
+        .error_cnt_o(error_cnt),
+        .error_o(error)
     );
 
     // --- Shift Logic (UNCHANGED) ---
@@ -145,6 +148,8 @@ module prbs_tb;
     initial begin
         seed      = 32'hFFFFFFFF;
         shift_amt = 6'd0;
+        valid_in  = 1'b0;
+        prbs_data_in = '0;
 
         // -- Test 1: No shift ----------------------------------------------
         $display("\n=== Test 1: No shift (shift_amt=0) ===");
